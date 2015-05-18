@@ -1,9 +1,6 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Security.Cryptography;
-using System.Text;
 
 namespace RainbowGun
 {
@@ -22,12 +19,12 @@ namespace RainbowGun
         {
             ShowEULA();
             Console.WriteLine("Accept - [y], Decline - [n]");
-            var accept_string = Console.ReadLine();
-            while (accept_string != null && (!accept_string.ToLower().Equals("y") && !accept_string.ToLower().Equals("n")))
+            var acceptString = Console.ReadLine();
+            while (acceptString != null && (!acceptString.ToLower().Equals("y") && !acceptString.ToLower().Equals("n")))
             {
-                accept_string = Console.ReadLine();
+                acceptString = Console.ReadLine();
             }
-            if (accept_string.ToLower().Equals("n")) return false;
+            if (acceptString.ToLower().Equals("n")) return false;
             WriteEULA();
             return true;
         }
@@ -80,10 +77,10 @@ namespace RainbowGun
 
         private static string GetMD5Hash(string path)
         {
-            using (FileStream fs = File.OpenRead(path))
+            using (var fs = File.OpenRead(path))
             {
                 MD5 md5 = new MD5CryptoServiceProvider();
-                byte[] fileData = new byte[fs.Length];
+                var fileData = new byte[fs.Length];
                 fs.Read(fileData, 0, (int)fs.Length);
                 byte[] checkSum = md5.ComputeHash(fileData);
                 string result = BitConverter.ToString(checkSum).Replace("-", String.Empty);

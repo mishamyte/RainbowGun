@@ -12,23 +12,23 @@ namespace RainbowGun
 {
     public class Proxy
     {
-        private string filename;
-        private string proxies_type;
-        private List<string> proxies = new List<string>();
-        private List<string> good_proxies = new List<string>();
-        private bool debug;
-        private int connection_timeout;
+        private readonly string _filename;
+        private readonly string _proxiesType;
+        private readonly List<string> _proxies = new List<string>();
+        private List<string> _goodProxies = new List<string>();
+        private readonly bool _debug;
+        private readonly int _connectionTimeout;
 
-        public Proxy(string fnm, string proxies_type = "http", bool dbg = false,int cnt = 15000)
+        public Proxy(string fnm, string proxiesType = "http", bool dbg = false,int cnt = 15000)
         {
-            filename = fnm;
-            debug = dbg;
-            connection_timeout = cnt;
+            _filename = fnm;
+            _debug = dbg;
+            _connectionTimeout = cnt;
 
-            if (proxies_type == "http" || proxies_type == "socks4" || proxies_type == "socks4a" ||
-                proxies_type == "socks5")
+            if (proxiesType == "http" || proxiesType == "socks4" || proxiesType == "socks4a" ||
+                proxiesType == "socks5")
             {
-                this.proxies_type = proxies_type;
+                this._proxiesType = proxiesType;
             }
         }
 
@@ -38,16 +38,16 @@ namespace RainbowGun
             {
                 CheckAllProxies();
             }
-            return good_proxies;
+            return _goodProxies;
         }
 
         public bool ReadProxies()
         {
             try
             {
-                if (File.Exists(filename))
+                if (File.Exists(_filename))
                 {
-                    using (StreamReader sr = new StreamReader(filename, Encoding.Default))
+                    using (var sr = new StreamReader(_filename, Encoding.Default))
                     {
                         int counter = 0;
                         while (!sr.EndOfStream)
@@ -56,23 +56,23 @@ namespace RainbowGun
                             if (Regex.IsMatch(tmp,
                                 @"\b(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\b:\d{2,5}"))
                             {
-                                proxies.Add(tmp);
-                                if (debug) Console.WriteLine("Good format: {0}",tmp);
+                                _proxies.Add(tmp);
+                                if (_debug) Console.WriteLine("Good format: {0}",tmp);
                                 counter++;
                             }
                             else
                             {
-                                if (debug) Console.WriteLine("Bad format: {0}", tmp);
+                                if (_debug) Console.WriteLine("Bad format: {0}", tmp);
                             }
                         }
-                        if (debug)
+                        if (_debug)
                         {
                             Console.ForegroundColor = ConsoleColor.Yellow;
                             Console.WriteLine("\nReaded {0} proxies!\n",counter);
                             Console.ResetColor();
                         }
                         sr.Close();
-                        if (proxies.Count != 0) return true;                      
+                        if (_proxies.Count != 0) return true;                      
                     }
 
                 }
@@ -90,56 +90,56 @@ namespace RainbowGun
 
         public int CheckAllProxies()
         {
-            good_proxies = new List<string>();
+            _goodProxies = new List<string>();
 
-            MultiThreading mt = new MultiThreading(proxies.Count);
-            mt.RunForEach(proxies,CheckProxy);
+            var mt = new MultiThreading(_proxies.Count);
+            mt.RunForEach(_proxies,CheckProxy);
 
             while (mt.Working)
             {
                 Thread.Sleep(1);
             }
-            return good_proxies.Count;
+            return _goodProxies.Count;
         }
 
-        private void CheckProxy(string proxy_string)
+        private void CheckProxy(string proxyString)
         {
             try
             {
                 ProxyClient proxyClient;
-                switch (proxies_type)
+                switch (_proxiesType)
                 {
                     case "http":
-                        proxyClient = HttpProxyClient.Parse(proxy_string);
+                        proxyClient = HttpProxyClient.Parse(proxyString);
                         break;
                     case "socks4":
-                        proxyClient = Socks4ProxyClient.Parse(proxy_string);
+                        proxyClient = Socks4ProxyClient.Parse(proxyString);
                         break;
                     case "socks4a":
-                        proxyClient = Socks4aProxyClient.Parse(proxy_string);
+                        proxyClient = Socks4aProxyClient.Parse(proxyString);
                         break;
                     case "socks5":
-                        proxyClient = Socks5ProxyClient.Parse(proxy_string);
+                        proxyClient = Socks5ProxyClient.Parse(proxyString);
                         break;
                     default:
-                        proxyClient = HttpProxyClient.Parse(proxy_string);
+                        proxyClient = HttpProxyClient.Parse(proxyString);
                         break;
                 }
-                proxyClient.ConnectTimeout = connection_timeout;
-                TcpClient tcpClient = proxyClient.CreateConnection("google.com", 80);
+                proxyClient.ConnectTimeout = _connectionTimeout;
+                var tcpClient = proxyClient.CreateConnection("google.com", 80);
                 if (tcpClient.Connected)
                 {
-                    good_proxies.Add(proxy_string);
-                    if (debug) Console.WriteLine("Good proxy: {0}", proxy_string);
+                    _goodProxies.Add(proxyString);
+                    if (_debug) Console.WriteLine("Good proxy: {0}", proxyString);
                 }
                 else
                 {
-                    if (debug) Console.WriteLine("Bad proxy: {0}", proxy_string); 
+                    if (_debug) Console.WriteLine("Bad proxy: {0}", proxyString); 
                 }
             }
             catch (ProxyException pex)
             {
-                if (debug) Console.WriteLine(pex.Message);
+                if (_debug) Console.WriteLine(pex.Message);
             }
             catch (Exception ex)
             {
@@ -149,12 +149,12 @@ namespace RainbowGun
 
         public List<string> ReturnAllProxies()
         {
-            return proxies;
+            return _proxies;
         }
 
         public List<string> ReturnGoodProxies()
         {
-            return good_proxies;
+            return _goodProxies;
         }
     }
 }
